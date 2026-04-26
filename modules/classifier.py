@@ -1,7 +1,7 @@
 """
 Module 4: Error Classification and Quality Scoring
 One SVM per error type trained on Fitness-AQA feature vectors.
-Quality score (0–100) derived from weighted error penalties.
+Quality score (0-100) derived from weighted error penalties.
 """
 
 import numpy as np
@@ -25,42 +25,46 @@ EXERCISE_ERRORS = {
         "knees_error":       {"weight": 0.30, "feedback": "Keep knees soft and avoid hyperextension."},
         "spine_error":       {"weight": 0.25, "feedback": "Avoid excessive lumbar extension — brace the core."},
     },
-    # BarbellRow uses image-based labels from Fitness-AQA
     "BarbellRow": {
         "lumbar_error":      {"weight": 0.55, "feedback": "Maintain a flat back — avoid rounding the lumbar spine."},
-        "torso_angle_error": {"weight": 0.45, "feedback": "Keep your torso angle consistent through the pull — don't let your hips rise early."},
+        "torso_angle_error": {"weight": 0.45, "feedback": "Keep torso angle consistent — don't let hips rise early."},
     },
 }
 
 
 class FormClassifier:
     """
-    One SVM pipeline (scaler + RBF SVC) per error class.
+    One SVM (scaler + RBF SVC) per error class.
     Use train() with Fitness-AQA data, or load() a pre-saved model.
-    At inference, predict() returns error flags + quality score.
+    predict() returns error flags, quality score, and feedback strings.
     """
 
     def __init__(self, exercise: str = "BackSquat"):
         if exercise not in EXERCISE_ERRORS:
-            raise ValueError(f"Unknown exercise: {exercise}. Choose from {list(EXERCISE_ERRORS)}")
-        self.exercise = exercise
+            raise ValueError(f"Unknown exercise '{exercise}'. Choose from {list(EXERCISE_ERRORS)}")
+        self.exercise     = exercise
         self.error_config = EXERCISE_ERRORS[exercise]
-        self.pipelines: Dict[str, Pipeline] = {}
+        self.pipelines: Dict[str, dict] = {}   # {error_name: {"scaler":..., "svm":...}}
 
-    def _make_pipeline(self):
-        scaler = MinMaxScaler()
-        svm    = SVC(kernel="rbf", C=10.0, gamma="scale", probability=True)
-        return {"scaler": scaler, "svm": svm}
+    def _make_pipeline(self) -> dict:
+        return {
+            "scaler": MinMaxScaler(),
+            "svm":    SVC(kernel="rbf", C=10.0, gamma="scale", probability=True),
+        }
 
     def train(self, X_train: np.ndarray, y_dict: Dict[str, np.ndarray]):
         """
         Args:
             X_train: Feature matrix (n_samples, n_features).
-            y_dict:  {error_name: binary_label_array} for each error type.
+            y_dict:  {error_name: binary_label_array (n_samples,)}
         """
         for error_name, y in y_dict.items():
             if error_name not in self.error_config:
-                print(f"[Classifier] Skipping '{error_name}' — not in error_config for {self.exercise}")
+                print(f"[Classifier] Skipping '{error_name}' — not in config for {self.exercise}")
+                continue
+            # Skip if only one class present (can't train a classifier)
+            if len(np.unique(y)) < 2:
+                print(f"[Classifier] Skipping '{error_name}' — only one class in training data")
                 continue
             pipe = self._make_pipeline()
             X_sc = pipe["scaler"].fit_transform(X_train)
@@ -74,9 +78,9 @@ class FormClassifier:
             features: Dict from compute_rep_features().
 
         Returns:
-            errors_detected:  {error_name: bool}
-            quality_score:    int 0-100
-            feedback_msgs:    list of corrective feedback strings
+            errors_detected: {error_name: bool}
+            quality_score:   int 0-100
+            feedback_msgs:   list of corrective feedback strings
         """
         x = np.array(list(features.values()), dtype=np.float32).reshape(1, -1)
         errors_detected: Dict[str, bool] = {}
@@ -90,7 +94,6 @@ class FormClassifier:
                 prob = pipe["svm"].predict_proba(X_sc)[0][1]
                 errors_detected[error_name] = bool(prob > 0.5)
 
-        # Collect feedback
         total_penalty = 0.0
         for error_name, detected in errors_detected.items():
             if detected:
@@ -102,7 +105,7 @@ class FormClassifier:
         return errors_detected, quality_score, feedback_msgs
 
     def _heuristic_predict(self, features: Dict[str, float]) -> Dict[str, bool]:
-        """Rule-based fallback when no trained model is available."""
+        """Rule-based fallback when no trained model is loaded."""
         errors = {}
         if self.exercise == "BackSquat":
             errors["knees_inward"]  = features.get("knee_symmetry", 0) > 12.0
@@ -120,16 +123,16 @@ class FormClassifier:
 
     def save(self, path: str):
         joblib.dump({
-            "exercise":    self.exercise,
-            "pipelines":   self.pipelines,
+            "exercise":     self.exercise,
+            "pipelines":    self.pipelines,
             "error_config": self.error_config,
         }, path)
-        print(f"[Classifier] Saved to {path}")
+        print(f"[Classifier] Saved → {path}")
 
     def load(self, path: str):
         data = joblib.load(path)
         self.exercise     = data["exercise"]
         self.pipelines    = data["pipelines"]
         self.error_config = data["error_config"]
-        print(f"[Classifier] Loaded {self.exercise} classifier from {path}")
+        print(f"[Classifier] Loaded {self.exercise} from {path}")
         return self
