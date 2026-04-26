@@ -99,7 +99,7 @@ def _process_clip_temporal(args: tuple) -> list:
             if w > frame_width:
                 frame = cv2.resize(
                     frame, (frame_width, int(h * frame_width / w)),
-                    interpolation=cv2.INTER_LINEAR)
+                    interpolation=cv2.INTER_AREA)
             rgb    = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             lm, _ = extractor.extract(rgb)
             if lm is not None:
@@ -245,13 +245,14 @@ def _process_image(args: tuple):
         return None
 
     h, w = img.shape[:2]
+    # Only downscale — never upscale small images (upscaling blurs and hurts MediaPipe)
     if w > frame_width:
         img = cv2.resize(img, (frame_width, int(h * frame_width / w)),
-                         interpolation=cv2.INTER_LINEAR)
+                         interpolation=cv2.INTER_AREA)  # INTER_AREA better for downscale
 
     extractor = PoseExtractor(
-        min_detection_conf=0.4,
-        min_tracking_conf=0.4,
+        min_detection_conf=0.3,    # lower for small/partial body images
+        min_tracking_conf=0.3,
         model_complexity=model_complexity,
     )
     lm, _ = extractor.extract(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))

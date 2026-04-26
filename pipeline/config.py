@@ -4,8 +4,10 @@ Speed defaults and exercise configuration.
 """
 
 FRAME_SKIP       = 3      # process every Nth frame
-FRAME_WIDTH      = 640    # resize width before MediaPipe
-MODEL_COMPLEXITY = 0      # 0=fast, 1=balanced, 2=accurate
+FRAME_WIDTH      = 320    # native BarbellRow images are ~350px wide — never upscale
+                          # 320px safe for all; videos will be downscaled, images untouched
+MODEL_COMPLEXITY = 1      # 1=balanced — better pose detection on small/portrait images
+                          # (0 was missing too many poses on 350x470 BarbellRow images)
 MIN_REP_FRAMES   = 2      # discard reps shorter than this many frames
 
 

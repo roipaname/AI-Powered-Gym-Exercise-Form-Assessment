@@ -59,16 +59,22 @@ def train_and_evaluate(clf_name: str, X: np.ndarray, y_dict: dict,
 
     print(f"\n  ── Evaluation ──────────────────────────────────────────────")
     f1s = []
+    from modules.classifier import DETECTION_THRESHOLD
     for error_name in y_test:
         if error_name not in clf.pipelines:
             continue
         pipe   = clf.pipelines[error_name]
         X_sc   = pipe["scaler"].transform(X_test)
-        y_pred = pipe["svm"].predict(X_sc)
+        # Use same threshold as predict() — lower than 0.5 for imbalanced data
+        probs  = pipe["svm"].predict_proba(X_sc)[:, 1]
+        y_pred = (probs >= DETECTION_THRESHOLD).astype(int)
         y_true = y_test[error_name]
+        pos_train = int(y_train[error_name].sum())
+        pos_test  = int(y_true.sum())
         f1     = f1_score(y_true, y_pred, zero_division=0)
         f1s.append(f1)
-        print(f"\n  [{error_name}]  F1 = {f1:.3f}")
+        print(f"\n  [{error_name}]  F1 = {f1:.3f}  "
+              f"(train pos: {pos_train} | test pos: {pos_test} | threshold: {DETECTION_THRESHOLD})")
         print(classification_report(y_true, y_pred,
               target_names=["no error", "error"], zero_division=0, digits=3))
         print(f"  Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
