@@ -110,4 +110,5 @@ temp/
 # ──────────────────────────────────────────────
 *.bak
 *.old
-*.orig
+*.orig.python-version
+pyproject.toml
