@@ -89,13 +89,18 @@ EXERCISE_CONFIG = {
             "val":   "val_keys.json",
             "test":  "test_keys.json",
         },
+        # traj_nan.json is a trajectory artifact — NOT a split file, skip it
+        "splits_ignore": {"traj_nan.json"},
         "labels_dir":  "Labeled_Dataset/labels",
         "label_files": {
-            "knees_inward":  "error_knees_inward.json",
+            # Flat label JSONs in Labeled_Dataset/labels/
             "knees_forward": "error_knees_forward.json",
-            "rounded_back":  "error_rounded_back.json",
-            "shallow_squat": "error_shallow_squat.json",
+            "knees_inward":  "error_knees_inward.json",
+            # shallow_squat lives in its own subfolder — loaded separately below
         },
+        # Shallow_Squat_Error_Dataset subfolder: may have its own splits + label file.
+        # Set path relative to ex_dir, or None to skip.
+        "shallow_squat_dir": "Labeled_Dataset/labels/Shallow_Squat_Error_Dataset",
         "per_error_splits": None,
     },
 
@@ -109,11 +114,13 @@ EXERCISE_CONFIG = {
             "val":   "val_keys.json",
             "test":  "test_keys.json",
         },
+        "splits_ignore": set(),
         "labels_dir":  "Labeled_Dataset/labels",
         "label_files": {
             "elbow_error": "error_elbows.json",
             "knees_error": "error_knees.json",
         },
+        "shallow_squat_dir": None,
         "per_error_splits": None,
     },
 
@@ -174,9 +181,37 @@ def load_labels(labels_dir: Path, label_files: dict) -> dict:
         if data is None:
             print(f"    [warn] Missing: {fpath}")
             continue
-        labels[error_name] = {str(k): int(v) for k, v in data.items()}
-        pos = sum(labels[error_name].values())
-        total = len(labels[error_name])
+        parsed = {}
+        skipped = 0
+        for k, v in data.items():
+            if isinstance(v, (int, float)):
+                # Normal: {"key": 0} or {"key": 1}
+                parsed[str(k)] = int(v)
+            elif isinstance(v, list):
+                # List value: [1] or [0, ...] — take first element
+                if len(v) > 0 and isinstance(v[0], (int, float)):
+                    parsed[str(k)] = int(v[0])
+                else:
+                    skipped += 1
+            elif isinstance(v, dict):
+                # Nested dict: {"label": 1, ...} — grab first numeric value
+                inner = [x for x in v.values() if isinstance(x, (int, float))]
+                if inner:
+                    parsed[str(k)] = int(inner[0])
+                else:
+                    skipped += 1
+            else:
+                skipped += 1
+
+        if skipped:
+            print(f"    [warn] {error_name}: skipped {skipped} unreadable entries")
+        if not parsed:
+            print(f"    [warn] {error_name}: no valid entries parsed — skipping")
+            continue
+
+        labels[error_name] = parsed
+        pos   = sum(parsed.values())
+        total = len(parsed)
         print(f"    {error_name}: {total:,} entries | {pos} positive ({100*pos/total:.1f}%)")
     return labels
 
@@ -339,6 +374,130 @@ def build_image_dataset(ex_dir: Path, cfg: dict, max_samples: int = None, dry_ru
 # VIDEO DATASET BUILDER  (Squat / OHP)
 # ══════════════════════════════════════════════════════════════════════════════
 
+def load_shallow_squat_dataset(ex_dir: Path, shallow_dir_rel: str,
+                               extractor: "PoseExtractor",
+                               max_samples: int = None, dry_run: bool = False):
+    """
+    Shallow_Squat_Error_Dataset is a self-contained image dataset, structured
+    identically to BarbellRow:
+
+      Shallow_Squat_Error_Dataset/
+        images/           <- VIDEOID_PERSONID_REPIDX.jpg  (e.g. 32903_8_40.jpg)
+        splits/
+          train_ids.json  <- list of "VIDEOID_PERSONID_REPIDX" keys  (lowercase!)
+          val_ids.json
+          test_ids.json
+        labels_shallow_depth.json   <- {key: 0/1}
+
+    Returns (X_rows, y_rows, splits_out, keys_out) — lists ready to append
+    to the main Squat dataset, or ([], {}, [], []) on failure/skip.
+    """
+    s_dir = ex_dir / shallow_dir_rel
+    if not s_dir.exists():
+        print(f"    [warn] Shallow_Squat_Error_Dataset not found: {s_dir} — skipping.")
+        return [], {}, [], []
+
+    # ── Find the label JSON ───────────────────────────────────────────────────
+    # Filename is labels_shallow_depth.json (confirmed from uploaded file)
+    label_candidates = list(s_dir.glob("labels_*.json")) + list(s_dir.glob("*.json"))
+    label_candidates = [f for f in label_candidates
+                        if "readme" not in f.name.lower()
+                        and f.parent == s_dir]   # only top-level files
+    if not label_candidates:
+        print(f"    [warn] No label JSON found in {s_dir}")
+        return [], {}, [], []
+
+    label_dict = {}
+    for fpath in label_candidates:
+        data = load_json(fpath)
+        if not isinstance(data, dict) or not data:
+            continue
+        for k, v in data.items():
+            if isinstance(v, (int, float)):
+                label_dict[str(k)] = int(v)
+            elif isinstance(v, list) and v and isinstance(v[0], (int, float)):
+                label_dict[str(k)] = int(v[0])
+            elif isinstance(v, dict):
+                inner = [x for x in v.values() if isinstance(x, (int, float))]
+                if inner:
+                    label_dict[str(k)] = int(inner[0])
+        pos = sum(label_dict.values())
+        total = len(label_dict)
+        print(f"    shallow_squat label ({fpath.name}): "
+              f"{total:,} entries, {pos} positive ({100*pos/total:.1f}%)" if total else "")
+
+    if not label_dict:
+        print(f"    [warn] shallow_squat label JSON was empty.")
+        return [], {}, [], []
+
+    # ── Load splits (train_ids.json / val_ids.json / test_ids.json) ──────────
+    splits_dir = s_dir / "splits"
+    key_to_split = {}
+    if splits_dir.exists():
+        # Filenames use lowercase _ids: train_ids.json, val_ids.json, test_ids.json
+        for split_name, fname in [("train", "train_ids.json"),
+                                   ("val",   "val_ids.json"),
+                                   ("test",  "test_ids.json")]:
+            data = load_json(splits_dir / fname)
+            if data:
+                for k in data:
+                    key_to_split[str(k)] = split_name
+                print(f"    shallow_squat split '{split_name}': {len(data):,} keys")
+    else:
+        print(f"    [warn] No splits/ folder in shallow squat dir — all assigned to train.")
+
+    # ── Find images ───────────────────────────────────────────────────────────
+    img_dir = s_dir / "images"
+    if not img_dir.exists():
+        print(f"    [warn] No images/ folder found in {s_dir}")
+        print(f"           Extract the shallow squat images zip into {img_dir}")
+        return [], {}, [], []
+
+    images = sorted(img_dir.glob("*.jpg")) + sorted(img_dir.glob("*.jpeg")) + sorted(img_dir.glob("*.png"))
+    print(f"    shallow_squat images: {len(images):,} found")
+
+    if max_samples:
+        images = images[:max_samples]
+
+    if dry_run:
+        print(f"    [DRY RUN] skipping shallow squat image extraction.")
+        return [], {}, [], []
+
+    # ── Extract features ──────────────────────────────────────────────────────
+    X_rows, splits_out, keys_out = [], [], []
+    y_rows = {"shallow_squat": []}
+    no_label = no_pose = 0
+
+    for i, img_path in enumerate(images):
+        key = img_path.stem   # "32903_8_40"
+
+        if key not in label_dict:
+            no_label += 1
+            continue
+
+        if (i + 1) % 500 == 0:
+            print(f"    shallow_squat [{i+1}/{len(images)}]", flush=True)
+
+        img = cv2.imread(str(img_path))
+        if img is None:
+            continue
+
+        feats = single_frame_features(img, extractor)
+        if feats is None:
+            no_pose += 1
+            continue
+
+        X_rows.append(feature_vector(feats))
+        keys_out.append(key)
+        splits_out.append(key_to_split.get(key, "train"))
+        y_rows["shallow_squat"].append(label_dict[key])
+
+    print(f"    shallow_squat collected: {len(X_rows):,} | "
+          f"no_label: {no_label} | no_pose: {no_pose}")
+
+    return X_rows, y_rows, splits_out, keys_out
+
+
 def build_video_dataset(ex_dir: Path, cfg: dict, max_clips: int = None, dry_run: bool = False):
     video_dir  = ex_dir / cfg["video_dir"]
     labels_dir = ex_dir / cfg["labels_dir"]
@@ -351,11 +510,16 @@ def build_video_dataset(ex_dir: Path, cfg: dict, max_clips: int = None, dry_run:
 
     print(f"\n  Loading labels ...")
     all_labels = load_labels(labels_dir, cfg["label_files"])
-    if not all_labels:
+
+    if not all_labels and not cfg.get("shallow_squat_dir"):
+        print("  [error] No labels loaded at all.")
         return None, None, None, None
 
     print(f"\n  Loading splits ...")
-    splits = load_split_keys(splits_dir, cfg["split_files"])
+    # Exclude non-split artifact files like traj_nan.json
+    ignore = cfg.get("splits_ignore", set())
+    active_splits = {k: v for k, v in cfg["split_files"].items() if v not in ignore}
+    splits = load_split_keys(splits_dir, active_splits)
     key_to_split = {}
     for sname, keyset in splits.items():
         for k in keyset:
@@ -436,8 +600,36 @@ def build_video_dataset(ex_dir: Path, cfg: dict, max_clips: int = None, dry_run:
             print(f"  [{vi+1}/{len(videos)}] {vpath.name} | "
                   f"{len(reps)} reps, {matched} matched | ETA {eta/60:.1f} min")
 
+    # ── Merge Shallow Squat image dataset (Squat only) ──────────────────────
+    shallow_dir = cfg.get("shallow_squat_dir")
+    if shallow_dir:
+        print(f"\n  Loading Shallow_Squat_Error_Dataset (image-based) ...")
+        ss_X, ss_y, ss_splits, ss_keys = load_shallow_squat_dataset(
+            ex_dir, shallow_dir, extractor,
+            max_samples=max_clips,   # reuse same cap for consistency
+            dry_run=False,
+        )
+        if ss_X:
+            X_rows.extend(ss_X)
+            splits_out.extend(ss_splits)
+            keys_out.extend(ss_keys)
+            # Merge y_rows: shallow_squat is a new error column;
+            # pad existing video rows with 0 (unknown/no shallow error)
+            n_video = len(X_rows) - len(ss_X)
+            if "shallow_squat" not in y_rows:
+                y_rows["shallow_squat"] = [0] * n_video
+            y_rows["shallow_squat"].extend(ss_y.get("shallow_squat", []))
+            # For all OTHER error columns, pad the new shallow squat rows with 0
+            for err in list(y_rows.keys()):
+                if err == "shallow_squat":
+                    continue
+                current_len = len(y_rows[err])
+                if current_len < len(X_rows):
+                    y_rows[err].extend([0] * (len(X_rows) - current_len))
+
     extractor.close()
-    print(f"\n  Collected: {len(X_rows):,} samples from {len(videos)} clips")
+    print(f"\n  Total collected: {len(X_rows):,} samples "
+          f"({len(videos)} video clips + shallow squat images)")
 
     X          = np.array(X_rows, dtype=np.float32)
     y_dict     = {e: np.array(v, dtype=int) for e, v in y_rows.items()}

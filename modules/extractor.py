@@ -20,7 +20,9 @@ LANDMARK_NAMES = {
 
 
 class PoseExtractor:
-    def __init__(self, min_detection_conf: float = 0.7, min_tracking_conf: float = 0.7,
+    def __init__(self,
+                 min_detection_conf: float = 0.5,   # lowered from 0.7 — gym footage is occluded
+                 min_tracking_conf: float = 0.5,    # lowered from 0.7
                  model_complexity: int = 1):
         self.mp_pose = mp.solutions.pose
         self.mp_draw = mp.solutions.drawing_utils
@@ -30,13 +32,14 @@ class PoseExtractor:
             min_tracking_confidence=min_tracking_conf,
             enable_segmentation=False,
         )
-        self.min_visibility = 0.6
+        self.min_visibility = 0.4   # lowered from 0.6 — side-on gym angles reduce visibility
 
     def extract(self, frame_rgb: np.ndarray):
         """
         Returns:
-            landmarks: np.ndarray of shape (33, 4) → [x, y, z, visibility]
-                       or None if pose not detected or confidence too low.
+            landmarks: np.ndarray shape (33, 4) → [x, y, z, visibility]
+                       None if pose not detected or key joints not visible.
+            annotated: frame with skeleton drawn (or original if no pose)
         """
         results = self.pose.process(frame_rgb)
         if not results.pose_landmarks:
@@ -45,12 +48,15 @@ class PoseExtractor:
         lm = results.pose_landmarks.landmark
         landmarks = np.array([[p.x, p.y, p.z, p.visibility] for p in lm], dtype=np.float32)
 
-        # Filter: reject if key joints are not visible enough
-        key_ids = [11, 12, 23, 24, 25, 26, 27, 28]
-        if np.mean(landmarks[key_ids, 3]) < self.min_visibility:
+        # Only require hips + one side of knees to be visible
+        # (some squat angles occlude one leg completely)
+        hip_ids  = [23, 24]
+        knee_ids = [25, 26]
+        if (np.mean(landmarks[hip_ids, 3]) < self.min_visibility and
+                np.mean(landmarks[knee_ids, 3]) < self.min_visibility):
             return None, frame_rgb
 
-        # Draw skeleton on a copy of the frame for display
+        # Draw skeleton overlay
         annotated = frame_rgb.copy()
         self.mp_draw.draw_landmarks(
             annotated,
