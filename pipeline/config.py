@@ -33,7 +33,7 @@ EXERCISE_CONFIG = {
     "OHP": {
         "clf_name":          "OverheadPress",
         "data_mode":         "video",
-        "label_mode":        "per_rep",    # VIDEOID_PERSONID_REPIDX: 0/1
+        "label_mode":        "temporal",   # same as Squat: [[start,end],...] per clip
         "video_dir":         "videos",
         "splits_dir":        "Labeled_Dataset/splits",
         "split_files":       {"train": "train_keys.json",

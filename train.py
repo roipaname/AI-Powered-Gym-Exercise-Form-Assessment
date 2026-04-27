@@ -75,6 +75,11 @@ def train_and_evaluate(clf_name: str, X: np.ndarray, y_dict: dict,
         f1s.append(f1)
         print(f"\n  [{error_name}]  F1 = {f1:.3f}  "
               f"(train pos: {pos_train} | test pos: {pos_test} | threshold: {DETECTION_THRESHOLD})")
+        # Only print full report if both classes present in test set
+        if len(np.unique(y_true)) < 2:
+            print(f"  [warn] Only one class in test set — skipping report "
+                  f"(run with full dataset for meaningful evaluation)")
+            continue
         print(classification_report(y_true, y_pred,
               target_names=["no error", "error"], zero_division=0, digits=3))
         print(f"  Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
