@@ -52,3 +52,14 @@ streamlit run app.py
 python main.py --exercise BackSquat    --model models/backsquat_svm.pkl
 python main.py --exercise OverheadPress --model models/overheadpress_svm.pkl
 python main.py --exercise BarbellRow   --model models/barbellrow_svm.pkl
+
+
+
+# Back Squat
+python main.py --exercise BackSquat
+
+# Overhead Press
+python main.py --exercise OverheadPress
+
+# Barbell Row
+python main.py --exercise BarbellRow
