@@ -330,18 +330,94 @@ with cam_col:
             unsafe_allow_html=True,
         )
     else:
-        st.markdown("""
-        <div style="aspect-ratio:16/9;background:rgba(2,10,14,0.9);border-radius:16px;
-          border:1px solid rgba(0,230,160,0.1);display:flex;flex-direction:column;
-          align-items:center;justify-content:center;gap:12px;">
-          <p style="font-family:'Bebas Neue',sans-serif;font-size:18px;
-            letter-spacing:0.1em;color:#3d7055;margin:0;">CAMERA REQUIRES INSTALL</p>
-          <code style="background:rgba(0,230,160,0.08);color:#00e6a0;padding:5px 14px;
-            border-radius:8px;font-size:12px;">pip install streamlit-webrtc aiortc</code>
-          <p style="font-size:11px;color:#3d7055;text-align:center;">
-            Then restart: <code style="color:#00e6a0;">streamlit run app.py</code>
-          </p>
-        </div>""", unsafe_allow_html=True)
+        # ── File-based live feed from main.py ─────────────────────────────────
+        # main.py writes frames to .formiq_live/frame.jpg at ~12fps.
+        # We read and display here with st.empty() for smooth in-place updates.
+        import base64 as _b64, time as _t
+
+        LIVE_DIR   = Path(".formiq_live")
+        FRAME_FILE = LIVE_DIR / "frame.jpg"
+        STATE_FILE = LIVE_DIR / "state.json"
+
+        live_frame_b64 = None
+        live_state     = None
+
+        try:
+            if FRAME_FILE.exists() and (_t.time() - FRAME_FILE.stat().st_mtime) < 3:
+                live_frame_b64 = _b64.b64encode(FRAME_FILE.read_bytes()).decode()
+            if STATE_FILE.exists() and (_t.time() - STATE_FILE.stat().st_mtime) < 3:
+                live_state = json.loads(STATE_FILE.read_text())
+        except Exception:
+            pass
+
+        # Sync live state into session state when main.py is running
+        if live_state:
+            try:
+                st.session_state.live_score  = live_state.get("score", 0)
+                st.session_state.live_errors = live_state.get("errors", {})
+                rep_count = live_state.get("rep_count", 0)
+                if rep_count > len(st.session_state.reps):
+                    st.session_state.reps.append({
+                        "rep_number": rep_count,
+                        "score":      live_state.get("score", 0),
+                        "errors":     live_state.get("errors", {}),
+                        "feedback":   live_state.get("feedback", []),
+                        "timestamp":  datetime.datetime.now().isoformat(),
+                    })
+                    if not st.session_state.session_start:
+                        st.session_state.session_start = datetime.datetime.now()
+            except Exception:
+                pass
+
+        if live_frame_b64:
+            phase   = live_state.get("phase", "") if live_state else ""
+            rep_cnt = live_state.get("rep_count", 0) if live_state else 0
+            score_v = live_state.get("score", 0) if live_state else 0
+            sc_col  = "#a8ff3e" if score_v >= 75 else "#ffb800" if score_v >= 50 else "#ff4d6d"
+            st.markdown(
+                f'<div style="position:relative;border-radius:16px;overflow:hidden;'
+                f'border:2px solid rgba(0,230,160,0.4);'
+                f'box-shadow:0 0 32px rgba(0,230,160,0.12);">'
+                f'<img src="data:image/jpeg;base64,{live_frame_b64}" '
+                f'style="width:100%;display:block;border-radius:14px;" loading="eager"/>'
+                f'<div style="position:absolute;top:10px;right:10px;'
+                f'background:rgba(10,20,12,0.8);border:1px solid rgba(255,77,109,0.5);'
+                f'color:#ff4d6d;font-family:Space Grotesk,sans-serif;font-size:10px;'
+                f'font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.1em;">'
+                f'● LIVE</div>'
+                f'<div style="position:absolute;bottom:10px;left:10px;display:flex;gap:8px;">'
+                f'<span style="background:rgba(10,20,12,0.8);border:1px solid rgba(0,230,160,0.3);'
+                f'color:#00e6a0;font-family:Space Grotesk;font-size:10px;font-weight:600;'
+                f'padding:3px 10px;border-radius:99px;">{rep_cnt} REPS</span>'
+                f'<span style="background:rgba(10,20,12,0.8);border:1px solid {sc_col}55;'
+                f'color:{sc_col};font-family:Space Grotesk;font-size:10px;font-weight:600;'
+                f'padding:3px 10px;border-radius:99px;">{score_v}/100</span>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "<p style='font-size:10px;color:#3d7055;text-align:center;margin-top:4px;"
+                "font-family:Space Grotesk;letter-spacing:0.05em;'>Live feed from main.py"
+                " · MediaPipe skeleton overlay active</p>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div style="aspect-ratio:16/9;background:rgba(2,10,14,0.9);'
+                'border-radius:16px;border:1px solid rgba(0,230,160,0.1);'
+                'display:flex;flex-direction:column;align-items:center;'
+                'justify-content:center;gap:12px;">'
+                '<div style="font-size:32px;opacity:0.15;">📷</div>'
+                '<p style="font-family:Bebas Neue,sans-serif;font-size:16px;'
+                'letter-spacing:0.12em;color:#3d7055;margin:0;">CAMERA OFFLINE</p>'
+                '<code style="background:rgba(0,230,160,0.08);color:#00e6a0;'
+                'padding:4px 12px;border-radius:8px;font-size:11px;">'
+                'python main.py --exercise BackSquat</code>'
+                '<p style="font-size:10px;color:#3d7055;text-align:center;'
+                'max-width:280px;">Run main.py in a second terminal to start the live feed</p>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
 with score_col:
     # Score ring card
@@ -661,12 +737,22 @@ with t4:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# AUTO-REFRESH  — only when a stream is actively playing
+# AUTO-REFRESH  — poll file-based feed at 6fps (every 160ms)
+# Only rerun when main.py is actually writing fresh frames.
 # ══════════════════════════════════════════════════════════════════════════════
 try:
-    if WEBRTC_AVAILABLE and "ctx" in dir() and ctx is not None:
-        if ctx.state.playing:
-            time.sleep(0.4)
-            st.rerun()
+    import time as _refresh_time
+    _ff = Path(".formiq_live") / "frame.jpg"
+    _is_live = _ff.exists() and (_refresh_time.time() - _ff.stat().st_mtime) < 3
+    if _is_live:
+        time.sleep(0.16)   # ~6fps refresh — smooth without hammering the CPU
+        st.rerun()
+    elif WEBRTC_AVAILABLE and "ctx" in dir() and ctx is not None:
+        try:
+            if ctx.state.playing:
+                time.sleep(0.16)
+                st.rerun()
+        except Exception:
+            pass
 except Exception:
     pass

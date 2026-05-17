@@ -1,9 +1,3 @@
-"""
-Module 1: Keypoint Extraction
-MediaPipe Pose — 33 3D landmarks per frame.
-Thresholds tuned for gym footage: side-on angles, partial occlusion,
-small portrait images (BarbellRow ~350x470px).
-"""
 
 import mediapipe as mp
 import numpy as np
@@ -22,9 +16,9 @@ LANDMARK_NAMES = {
 
 class PoseExtractor:
     def __init__(self,
-                 min_detection_conf: float = 0.3,   # low — gym footage is occluded
+                 min_detection_conf: float = 0.3,   
                  min_tracking_conf:  float = 0.3,
-                 model_complexity:   int   = 1):    # 1=balanced, better on small images
+                 model_complexity:   int   = 1):   
         self.mp_pose = mp.solutions.pose
         self.mp_draw = mp.solutions.drawing_utils
         self.pose = self.mp_pose.Pose(
@@ -33,7 +27,7 @@ class PoseExtractor:
             min_tracking_confidence=min_tracking_conf,
             enable_segmentation=False,
         )
-        self.min_visibility = 0.3   # relaxed — side-on shots reduce visibility scores
+        self.min_visibility = 0.3   
 
     def extract(self, frame_rgb: np.ndarray):
         """

@@ -25,29 +25,37 @@ LIVE_DIR   = _Path(".formiq_live")
 FRAME_FILE = LIVE_DIR / "frame.jpg"
 STATE_FILE = LIVE_DIR / "state.json"
 
+# Throttle: only write to disk at ~12fps to reduce I/O pressure
+_last_write_time = 0.0
+_WRITE_INTERVAL  = 1.0 / 12   # seconds between frame writes
+
 def _write_live(frame_bgr, score, errors, reps, trend, fatigue, overload, phase):
-    """Write current frame + state for app.py to read."""
+    """Write current frame + state for app.py to read (throttled to 12fps)."""
+    global _last_write_time
+    import time as _time_mod
+    now = _time_mod.time()
+    if now - _last_write_time < _WRITE_INTERVAL:
+        return   # skip this frame — not enough time has passed
+    _last_write_time = now
     try:
         LIVE_DIR.mkdir(exist_ok=True)
-        cv2.imwrite(str(FRAME_FILE), frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 70])
-        _json.dumps({   # validate serialisable
-            "score": score if isinstance(score, int) else 0,
-            "errors": {k: bool(v) for k, v in errors.items()},
-            "rep_count": reps,
-            "trend": trend,
-            "fatigue": fatigue,
-            "overload": overload,
-            "phase": phase,
-            "ts": _json.dumps(None),   # placeholder
-        })
+        # Resize to 640px wide before writing — smaller file = faster transfer
+        h, w = frame_bgr.shape[:2]
+        if w > 640:
+            scale = 640 / w
+            frame_bgr = cv2.resize(frame_bgr,
+                                   (640, int(h * scale)),
+                                   interpolation=cv2.INTER_LINEAR)
+        # Quality 85 = sharp enough, ~40KB per frame
+        cv2.imwrite(str(FRAME_FILE), frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
         STATE_FILE.write_text(_json.dumps({
-            "score": score if isinstance(score, int) else 0,
-            "errors": {k: bool(v) for k, v in errors.items()},
+            "score":     score if isinstance(score, int) else 0,
+            "errors":    {k: bool(v) for k, v in errors.items()},
             "rep_count": reps,
-            "trend": trend,
-            "fatigue": fatigue,
-            "overload": overload,
-            "phase": phase,
+            "trend":     trend,
+            "fatigue":   fatigue,
+            "overload":  overload,
+            "phase":     phase,
         }))
     except Exception:
         pass   # never crash the main loop over a write failure
