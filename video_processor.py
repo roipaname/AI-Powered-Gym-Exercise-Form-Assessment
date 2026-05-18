@@ -1,8 +1,4 @@
-"""
-video_processor.py — WebRTC video pipeline for FormIQ
-Handles: pose extraction → rep segmentation → error classification → HUD overlay
-Imported by app.py when streamlit-webrtc is available.
-"""
+
 
 import os
 os.environ["GLOG_minloglevel"]      = "3"

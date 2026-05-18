@@ -1,12 +1,4 @@
 """
-train.py — Fitness-AQA Training Entry Point
-============================================
-All logic is in pipeline/:
-  config.py   — exercise config and speed defaults
-  helpers.py  — label loaders, split loaders, feature helpers
-  workers.py  — multiprocessing worker functions
-  datasets.py — dataset builders (video + image)
-
 Usage:
   python train.py --exercise Squat --max_samples 50
   python train.py --exercise all

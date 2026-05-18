@@ -56,13 +56,13 @@ Press **Q** to quit. Session summary is saved to `logs/`.
 
 ## Pipeline
 
-| Module | Description |
-|--------|-------------|
-| **1 – Extractor** | MediaPipe Pose · 33 3D landmarks · visibility filtering |
-| **2 – Segmentor** | Hip midpoint trajectory · `scipy.signal.find_peaks` · Savitzky-Golay smoothing |
-| **3 – Features** | Joint angles · symmetry ratios · depth · temporal smoothness |
-| **4 – Classifier** | Per-error SVM (RBF) · Fitness-AQA labels · 0–100 quality score |
-| **5 – Tracker** *(NEW)* | Rep history · trend regression · overload readiness · session JSON export |
+| Module                  | Description                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| **1 – Extractor**       | MediaPipe Pose · 33 3D landmarks · visibility filtering                        |
+| **2 – Segmentor**       | Hip midpoint trajectory · `scipy.signal.find_peaks` · Savitzky-Golay smoothing |
+| **3 – Features**        | Joint angles · symmetry ratios · depth · temporal smoothness                   |
+| **4 – Classifier**      | Per-error SVM (RBF) · Fitness-AQA labels · 0–100 quality score                 |
+| **5 – Tracker** _(NEW)_ | Rep history · trend regression · overload readiness · session JSON export      |
 
 ---
 
@@ -86,7 +86,7 @@ clf.save("models/backsquat_svm.pkl")
 clf.load("models/backsquat_svm.pkl")
 ```
 
-Without a trained model, the system falls back to heuristic rules (still useful for demos).
+Without a trained model, the system falls back to heuristic .
 
 ---
 
@@ -105,12 +105,12 @@ The tracker adds **longitudinal intelligence** beyond single-rep scoring:
 
 ## Evaluation Protocol (Fitness-AQA)
 
-| Metric | Target |
-|--------|--------|
-| Accuracy (Knees Inward – BackSquat) | >95% |
-| F1 per error class | >0.80 |
-| Inference latency | <30ms/frame (CPU) |
-| Rep segmentation error | ±1 frame |
+| Metric                              | Target            |
+| ----------------------------------- | ----------------- |
+| Accuracy (Knees Inward – BackSquat) | >95%              |
+| F1 per error class                  | >0.80             |
+| Inference latency                   | <30ms/frame (CPU) |
+| Rep segmentation error              | ±1 frame          |
 
 Baselines: OpenPose-TDM and HMR-TDM from Parmar et al. (ECCV 2022).
 
@@ -118,11 +118,11 @@ Baselines: OpenPose-TDM and HMR-TDM from Parmar et al. (ECCV 2022).
 
 ## References
 
-1. Parmar et al. (2022). *Domain Knowledge-Informed Self-Supervised Representations for Workout Form Assessment.* ECCV.
-2. Yin et al. (2025). *FLEX: A Large-Scale Multimodal Dataset for Fitness Action Quality Assessment.* arXiv:2506.03198.
-3. Lugaresi et al. (2019). *MediaPipe: A Framework for Building Perception Pipelines.* arXiv:1906.08172.
-4. Cao et al. (2019). *OpenPose: Realtime Multi-Person 2D Pose Estimation.* IEEE TPAMI.
+1. Parmar et al. (2022). _Domain Knowledge-Informed Self-Supervised Representations for Workout Form Assessment._ ECCV.
+2. Yin et al. (2025). _FLEX: A Large-Scale Multimodal Dataset for Fitness Action Quality Assessment._ arXiv:2506.03198.
+3. Lugaresi et al. (2019). _MediaPipe: A Framework for Building Perception Pipelines._ arXiv:1906.08172.
+4. Cao et al. (2019). _OpenPose: Realtime Multi-Person 2D Pose Estimation._ IEEE TPAMI.
 
 ---
 
-*Student: Clarence Obini Dinkaa Ebebe · 222086329 · University of Johannesburg · IT28X07*
+_Student: Clarence Obini Dinkaa Ebebe · 222086329 · University of Johannesburg · IT28X07_

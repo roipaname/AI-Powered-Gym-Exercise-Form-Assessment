@@ -1,8 +1,4 @@
-"""
-theme.py — FormIQ Design System
-All CSS, HTML components, and SVG builders in one place.
-Import in app.py: from theme import CSS, card, score_ring_svg, pill, ...
-"""
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # GLOBAL CSS

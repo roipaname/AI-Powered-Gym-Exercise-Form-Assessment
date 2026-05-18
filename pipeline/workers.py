@@ -1,9 +1,3 @@
-"""
-pipeline/workers.py
-Top-level worker functions for multiprocessing.
-Must be defined at module level (not nested) for pickle compatibility.
-
-"""
 
 import os
 import sys

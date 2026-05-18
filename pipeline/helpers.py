@@ -1,5 +1,4 @@
 """
-pipeline/helpers.py
 Shared utilities: logging suppression, label loaders, index builders,
 split loaders, single-frame feature extraction.
 """
