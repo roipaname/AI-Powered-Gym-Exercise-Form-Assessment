@@ -10,7 +10,6 @@ import numpy as np
 from pathlib import Path
 
 
-# ── Silence MediaPipe / TF before anything imports them ───────────────────────
 def suppress_mediapipe():
     """Call at the top of every worker process and in main."""
     os.environ["GLOG_minloglevel"]       = "3"
@@ -20,7 +19,7 @@ def suppress_mediapipe():
     warnings.filterwarnings("ignore")
 
 
-suppress_mediapipe()   # apply immediately on import
+suppress_mediapipe()   
 
 
 # ══════════════════════════════════════════════════════════════════════════════

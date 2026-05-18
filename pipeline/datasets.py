@@ -1,7 +1,6 @@
 """
-pipeline/datasets.py
+
 Dataset builders for each exercise type.
-Orchestrates label loading, split loading, and parallel extraction.
 """
 
 import time

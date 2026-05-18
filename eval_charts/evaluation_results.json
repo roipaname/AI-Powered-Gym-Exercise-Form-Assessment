@@ -1,0 +1,58 @@
+{
+  "knees_inward": {
+    "exercise": "Back Squat",
+    "precision": 0.76,
+    "recall": 0.68,
+    "f1": 0.72,
+    "support": 84,
+    "pos_rate": 0.22
+  },
+  "knees_forward": {
+    "exercise": "Back Squat",
+    "precision": 0.71,
+    "recall": 0.65,
+    "f1": 0.68,
+    "support": 91,
+    "pos_rate": 0.18
+  },
+  "shallow_squat": {
+    "exercise": "Back Squat",
+    "precision": 0.82,
+    "recall": 0.71,
+    "f1": 0.76,
+    "support": 58,
+    "pos_rate": 0.28
+  },
+  "elbow_error": {
+    "exercise": "OHP",
+    "precision": 0.69,
+    "recall": 0.61,
+    "f1": 0.65,
+    "support": 72,
+    "pos_rate": 0.16
+  },
+  "knees_error": {
+    "exercise": "OHP",
+    "precision": 0.74,
+    "recall": 0.59,
+    "f1": 0.66,
+    "support": 48,
+    "pos_rate": 0.14
+  },
+  "lumbar_error": {
+    "exercise": "Barbell Row",
+    "precision": 0.73,
+    "recall": 0.64,
+    "f1": 0.68,
+    "support": 210,
+    "pos_rate": 0.32
+  },
+  "torso_angle_error": {
+    "exercise": "Barbell Row",
+    "precision": 0.61,
+    "recall": 0.55,
+    "f1": 0.58,
+    "support": 43,
+    "pos_rate": 0.09
+  }
+}

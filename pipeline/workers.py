@@ -3,11 +3,6 @@ pipeline/workers.py
 Top-level worker functions for multiprocessing.
 Must be defined at module level (not nested) for pickle compatibility.
 
-Key fix for 0-reps issue:
-  - MediaPipe confidence thresholds lowered to 0.4/0.4
-  - Visibility filter relaxed to 0.3 (gym videos often have partial occlusion)
-  - Frame skip applied AFTER reading, not as a cap on reading
-  - FPS read from video metadata for accurate timestamps
 """
 
 import os
@@ -78,7 +73,7 @@ def _process_clip_temporal(args: tuple) -> list:
     if fps <= 0:
         fps = 30.0
 
-    # Relaxed thresholds — gym footage is often occluded / side-on
+    
     extractor = PoseExtractor(
         min_detection_conf=0.4,
         min_tracking_conf=0.4,
@@ -86,9 +81,9 @@ def _process_clip_temporal(args: tuple) -> list:
     )
     segmentor = RepSegmentor()
 
-    lm_buf = []   # landmark arrays for kept frames
-    ts_buf = []   # original-video timestamps for kept frames (seconds)
-    fi     = 0    # original frame index
+    lm_buf = []   
+    ts_buf = []   
+    fi     = 0   
 
     while True:
         ret, frame = cap.read()
@@ -245,7 +240,7 @@ def _process_image(args: tuple):
         return None
 
     h, w = img.shape[:2]
-    # Only downscale — never upscale small images (upscaling blurs and hurts MediaPipe)
+    
     if w > frame_width:
         img = cv2.resize(img, (frame_width, int(h * frame_width / w)),
                          interpolation=cv2.INTER_AREA)  # INTER_AREA better for downscale

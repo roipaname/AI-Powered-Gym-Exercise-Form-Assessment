@@ -1,5 +1,4 @@
 """
-pipeline/config.py
 Speed defaults and exercise configuration.
 """
 
