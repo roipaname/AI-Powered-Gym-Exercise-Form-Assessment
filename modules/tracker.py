@@ -1,8 +1,3 @@
-"""
-Module 5 (NEW): Progressive Overload & Session Tracker
-Logs rep-by-rep quality scores, detects form-degradation trends,
-and generates progressive overload readiness signals.
-"""
 
 import json
 import datetime
@@ -10,9 +5,8 @@ import numpy as np
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field, asdict   
-#light changes
-#light changes
-#light changes
+
+
 
 
 @dataclass

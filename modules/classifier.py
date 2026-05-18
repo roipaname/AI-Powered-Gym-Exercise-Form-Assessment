@@ -1,13 +1,4 @@
-"""
-Module 4: Error Classification and Quality Scoring
-One SVM per error type trained on Fitness-AQA feature vectors.
-Quality score (0-100) derived from weighted error penalties.
 
-Key fix for class imbalance:
-  - SVC(class_weight='balanced') — auto-weights minority class
-  - predict() uses probability threshold 0.3 instead of 0.5
-    so the model is more sensitive to rare errors
-"""
 
 import numpy as np
 import joblib
@@ -35,8 +26,7 @@ EXERCISE_ERRORS = {
     },
 }
 
-# Probability threshold for calling an error "detected"
-# Lower than 0.5 makes the model more sensitive to minority (error) class
+
 DETECTION_THRESHOLD = 0.35
 
 

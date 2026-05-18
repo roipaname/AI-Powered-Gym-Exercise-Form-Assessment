@@ -3,12 +3,12 @@ pipeline/config.py
 Speed defaults and exercise configuration.
 """
 
-FRAME_SKIP       = 3      # process every Nth frame
-FRAME_WIDTH      = 320    # native BarbellRow images are ~350px wide — never upscale
-                          # 320px safe for all; videos will be downscaled, images untouched
-MODEL_COMPLEXITY = 1      # 1=balanced — better pose detection on small/portrait images
-                          # (0 was missing too many poses on 350x470 BarbellRow images)
-MIN_REP_FRAMES   = 2      # discard reps shorter than this many frames
+FRAME_SKIP       = 3      
+FRAME_WIDTH      = 320    
+                          
+MODEL_COMPLEXITY = 1      
+                          
+MIN_REP_FRAMES   = 2     
 
 
 EXERCISE_CONFIG = {
@@ -16,7 +16,7 @@ EXERCISE_CONFIG = {
     "Squat": {
         "clf_name":          "BackSquat",
         "data_mode":         "video",
-        "label_mode":        "temporal",   # [[start_sec, end_sec], ...] per clip
+        "label_mode":        "temporal",   
         "video_dir":         "videos",
         "splits_dir":        "Labeled_Dataset/splits",
         "split_files":       {"train": "train_keys.json",
@@ -33,7 +33,7 @@ EXERCISE_CONFIG = {
     "OHP": {
         "clf_name":          "OverheadPress",
         "data_mode":         "video",
-        "label_mode":        "temporal",   # same as Squat: [[start,end],...] per clip
+        "label_mode":        "temporal",   
         "video_dir":         "videos",
         "splits_dir":        "Labeled_Dataset/splits",
         "split_files":       {"train": "train_keys.json",
