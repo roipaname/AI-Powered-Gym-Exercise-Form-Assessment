@@ -460,7 +460,7 @@ with score_col:
 # TABS
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("<br/>", unsafe_allow_html=True)
-t1, t2, t3, t4 = st.tabs(["📊  Session", "🔁  Rep Log", "📈  Analytics", "📖  Setup"])
+t1, t2, t3, t4 = st.tabs(["Session", "Rep Log", "Analytics", "Setup"])
 
 
 # ─────────────────────────────────────────────────────────
@@ -516,14 +516,14 @@ with t1:
         fatigue = len(scores) >= 4 and tl == "declining"
         plateau = len(scores) >= 5 and (max(scores[-5:]) - min(scores[-5:])) <= 5
         alerts  = []
-        if fatigue: alerts.append(("⚡", "FATIGUE", "Form declining — rest or reduce load.",
+        if fatigue: alerts.append(("", "FATIGUE", "Form declining — rest or reduce load.",
                                    "#ff4d6d", "rgba(255,77,109,0.1)"))
-        if ov:      alerts.append(("🚀", "OVERLOAD READY", "3 clean reps ≥80 — add weight.",
+        if ov:      alerts.append(("", "OVERLOAD READY", "3 clean reps ≥80 — add weight.",
                                    "#a8ff3e", "rgba(168,255,62,0.08)"))
-        if plateau: alerts.append(("📊", "PLATEAU", "Scores stable — vary load or cues.",
+        if plateau: alerts.append(("", "PLATEAU", "Scores stable — vary load or cues.",
                                    "#ffb800", "rgba(255,184,0,0.08)"))
         if not alerts:
-            alerts.append(("✓", "ALL CLEAR", "No alerts — keep training.",
+            alerts.append(("", "ALL CLEAR", "No alerts — keep training.",
                            "#00e6a0", "rgba(0,230,160,0.06)"))
 
         alerts_html = "".join([alert_box(i, t, m, c, b) for i, t, m, c, b in alerts])

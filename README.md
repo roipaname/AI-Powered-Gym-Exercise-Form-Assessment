@@ -47,7 +47,10 @@ Opens at `http://localhost:8501`. Use **"Simulate Rep"** in the sidebar to gener
 ### 3. Live webcam mode (CLI)
 
 ```bash
-python main.py --exercise BackSquat --athlete yourname
+python main.py --exercise BackSquat --athlete Clarence
+python main.py --exercise BackSquat
+python main.py --exercise OverheadPress --athlete Clarence
+python main.py --exercise BarbellRow
 ```
 
 Press **Q** to quit. Session summary is saved to `logs/`.
